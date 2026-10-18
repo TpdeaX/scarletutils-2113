@@ -81,17 +81,16 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
     // 1. Resolve base address of Geometry Dash
     gd_base = reinterpret_cast<uintptr_t>(GetModuleHandleA(NULL));
 
-    // 2. Wait until Geometry Dash window is initialized
-    while (!hwnd) {
-        hwnd = FindWindowA("GLFW30", NULL);
-        if (!hwnd) hwnd = FindWindowA(NULL, "Geometry Dash");
-        Sleep(50);
-    }
+    // 2. Initialize MinHook once
+    MH_Initialize();
 
     // 3. Load saved settings
     Config::load();
 
-    // 4. Hook wglSwapBuffers for ImGui rendering
+    // 4. Install all GD 2.113 gameplay hooks immediately
+    Hooks::install();
+
+    // 5. Hook wglSwapBuffers for ImGui rendering
     HMODULE opengl32 = GetModuleHandleA("opengl32.dll");
     if (!opengl32) {
         opengl32 = LoadLibraryA("opengl32.dll");
@@ -100,14 +99,15 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
     if (opengl32) {
         void* pSwap = reinterpret_cast<void*>(GetProcAddress(opengl32, "wglSwapBuffers"));
         if (pSwap) {
-            MH_Initialize();
             MH_CreateHook(pSwap, reinterpret_cast<LPVOID>(&hook_wglSwapBuffers), reinterpret_cast<LPVOID*>(&orig_wglSwapBuffers));
             MH_EnableHook(pSwap);
         }
     }
 
-    // 5. Install game hooks from 2.113 addresses
-    Hooks::install();
+    // Try to get hwnd if already created
+    if (!hwnd) {
+        hwnd = FindWindowA(NULL, "Geometry Dash");
+    }
 
     return 0;
 }

@@ -517,12 +517,18 @@ static void __fastcall hook_playLayer_update(gd::PlayLayer* self, void* edx, flo
 namespace Hooks {
 
 bool install() {
-    if (MH_Initialize() != MH_OK) {
+    MH_STATUS initStatus = MH_Initialize();
+    if (initStatus != MH_OK && initStatus != MH_ERROR_ALREADY_INITIALIZED) {
         return false;
     }
 
     #define CREATE_HOOK(offset, detour, original) \
-        MH_CreateHook(reinterpret_cast<LPVOID>(gd_base + (offset)), reinterpret_cast<LPVOID>(&detour), reinterpret_cast<LPVOID*>(&original))
+        do { \
+            MH_STATUS s = MH_CreateHook(reinterpret_cast<LPVOID>(gd_base + (offset)), reinterpret_cast<LPVOID>(&detour), reinterpret_cast<LPVOID*>(&original)); \
+            if (s == MH_OK || s == MH_ERROR_ALREADY_CREATED) { \
+                MH_EnableHook(reinterpret_cast<LPVOID>(gd_base + (offset))); \
+            } \
+        } while (0)
 
     CREATE_HOOK(OFFSET_BGL_PUSH_BUTTON,         hook_bgl_pushButton,         orig_bgl_pushButton);
     CREATE_HOOK(OFFSET_BGL_BUMP_PLAYER,          hook_bgl_bumpPlayer,          orig_bgl_bumpPlayer);
@@ -559,7 +565,7 @@ bool install() {
 
     #undef CREATE_HOOK
 
-    return MH_EnableHook(MH_ALL_HOOKS) == MH_OK;
+    return true;
 }
 
 void remove() {
