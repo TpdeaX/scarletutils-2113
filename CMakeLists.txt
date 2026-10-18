@@ -1,8 +1,15 @@
 cmake_minimum_required(VERSION 3.20)
+
+if(POLICY CMP0169)
+    cmake_policy(SET CMP0169 OLD)
+endif()
+
 project(scarletutils_2113 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN _CRT_SECURE_NO_WARNINGS)
 
 # Note: Geometry Dash 2.113 is a 32-bit (x86) application.
 # Make sure to configure CMake with: cmake -B build -A Win32

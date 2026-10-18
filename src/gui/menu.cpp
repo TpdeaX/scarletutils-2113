@@ -1,8 +1,14 @@
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <algorithm>
 #include "menu.hpp"
 #include "../includes.hpp"
 #include "../config.hpp"
 #include <imgui.h>
-#include <algorithm>
 
 namespace GUI {
 
@@ -158,14 +164,14 @@ void render() {
 
                     ImGui::PushItemWidth(100.f);
                     if (ImGui::InputDouble("Threshold##p1ship", &straightFlyThresholdP1, 0.0, 0.0, "%.2f")) {
-                        straightFlyThresholdP1 = std::max(straightFlyThresholdP1, 0.0);
+                        straightFlyThresholdP1 = (std::max)(straightFlyThresholdP1, 0.0);
                         Config::save();
                     }
 
                     if (ImGui::Checkbox("Player 2##ship", &straightFlyP2)) Config::save();
 
                     if (ImGui::InputDouble("Threshold##p2ship", &straightFlyThresholdP2, 0.0, 0.0, "%.2f")) {
-                        straightFlyThresholdP2 = std::max(straightFlyThresholdP2, 0.0);
+                        straightFlyThresholdP2 = (std::max)(straightFlyThresholdP2, 0.0);
                         Config::save();
                     }
                     ImGui::PopItemWidth();
@@ -188,22 +194,22 @@ void render() {
 
                     ImGui::PushItemWidth(100.f);
                     if (ImGui::InputDouble("Target Y##p1ufo", &straightUfoTargetP1, 0.0, 0.0, "%.2f")) {
-                        straightUfoTargetP1 = std::max(straightUfoTargetP1, 0.0);
+                        straightUfoTargetP1 = (std::max)(straightUfoTargetP1, 0.0);
                         Config::save();
                     }
                     if (ImGui::InputDouble("Threshold##p1ufo", &straightUfoThresholdP1, 0.0, 0.0, "%.2f")) {
-                        straightUfoThresholdP1 = std::max(straightUfoThresholdP1, 0.0);
+                        straightUfoThresholdP1 = (std::max)(straightUfoThresholdP1, 0.0);
                         Config::save();
                     }
 
                     if (ImGui::Checkbox("Player 2##ufo", &straightUfoP2)) Config::save();
 
                     if (ImGui::InputDouble("Target Y##p2ufo", &straightUfoTargetP2, 0.0, 0.0, "%.2f")) {
-                        straightUfoTargetP2 = std::max(straightUfoTargetP2, 0.0);
+                        straightUfoTargetP2 = (std::max)(straightUfoTargetP2, 0.0);
                         Config::save();
                     }
                     if (ImGui::InputDouble("Threshold##p2ufo", &straightUfoThresholdP2, 0.0, 0.0, "%.2f")) {
-                        straightUfoThresholdP2 = std::max(straightUfoThresholdP2, 0.0);
+                        straightUfoThresholdP2 = (std::max)(straightUfoThresholdP2, 0.0);
                         Config::save();
                     }
                     ImGui::PopItemWidth();
@@ -221,10 +227,10 @@ void render() {
                 if (ImGui::BeginPopup("autoclicker p1 options")) {
                     ImGui::PushItemWidth(100.f);
                     if (ImGui::InputInt("Click every frames##p1", &autoclickerEveryP1, 0, 0)) {
-                        autoclickerEveryP1 = std::max(autoclickerEveryP1, 0);
+                        autoclickerEveryP1 = (std::max)(autoclickerEveryP1, 0);
                     }
                     if (ImGui::InputInt("Hold for frames##p1", &autoclickerHoldP1, 0, 0)) {
-                        autoclickerHoldP1 = std::max(autoclickerHoldP1, 1);
+                        autoclickerHoldP1 = (std::max)(autoclickerHoldP1, 1);
                     }
                     ImGui::Checkbox("Swift##autoclickP1", &autoclickerSwiftP1);
                     ImGui::PopItemWidth();
@@ -242,10 +248,10 @@ void render() {
                 if (ImGui::BeginPopup("autoclicker p2 options")) {
                     ImGui::PushItemWidth(100.f);
                     if (ImGui::InputInt("Click every frames##p2", &autoclickerEveryP2, 0, 0)) {
-                        autoclickerEveryP2 = std::max(autoclickerEveryP2, 0);
+                        autoclickerEveryP2 = (std::max)(autoclickerEveryP2, 0);
                     }
                     if (ImGui::InputInt("Hold for frames##p2", &autoclickerHoldP2, 0, 0)) {
-                        autoclickerHoldP2 = std::max(autoclickerHoldP2, 1);
+                        autoclickerHoldP2 = (std::max)(autoclickerHoldP2, 1);
                     }
                     ImGui::Checkbox("Swift##autoclickP2", &autoclickerSwiftP2);
                     ImGui::PopItemWidth();
@@ -298,11 +304,11 @@ void render() {
                 if (ImGui::BeginPopup("level fade options")) {
                     ImGui::PushItemWidth(100.f);
                     if (ImGui::InputDouble("Fade In##level", &fadeLevelInDuration, 0.0, 0.0, "%.2f")) {
-                        fadeLevelInDuration = std::max(fadeLevelInDuration, 0.0);
+                        fadeLevelInDuration = (std::max)(fadeLevelInDuration, 0.0);
                         Config::save();
                     }
                     if (ImGui::InputDouble("Fade Out##level", &fadeLevelOutDuration, 0.0, 0.0, "%.2f")) {
-                        fadeLevelOutDuration = std::max(fadeLevelOutDuration, 0.0);
+                        fadeLevelOutDuration = (std::max)(fadeLevelOutDuration, 0.0);
                         Config::save();
                     }
                     ImGui::PopItemWidth();
@@ -323,11 +329,11 @@ void render() {
                 if (ImGui::BeginPopup("audio fade options")) {
                     ImGui::PushItemWidth(100.f);
                     if (ImGui::InputDouble("Fade In##audio", &fadeAudioInDuration, 0.0, 0.0, "%.2f")) {
-                        fadeAudioInDuration = std::max(fadeAudioInDuration, 0.0);
+                        fadeAudioInDuration = (std::max)(fadeAudioInDuration, 0.0);
                         Config::save();
                     }
                     if (ImGui::InputDouble("Fade Out##audio", &fadeAudioOutDuration, 0.0, 0.0, "%.2f")) {
-                        fadeAudioOutDuration = std::max(fadeAudioOutDuration, 0.0);
+                        fadeAudioOutDuration = (std::max)(fadeAudioOutDuration, 0.0);
                         Config::save();
                     }
                     ImGui::PopItemWidth();
