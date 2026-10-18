@@ -25,7 +25,23 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/TsudaKageyu/minhook.git
     GIT_TAG        v1.3.3
 )
-FetchContent_MakeAvailable(minhook)
+FetchContent_GetProperties(minhook)
+if(NOT minhook_POPULATED)
+    FetchContent_Populate(minhook)
+endif()
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(MINHOOK_HDE "${minhook_SOURCE_DIR}/src/hde/hde64.c")
+else()
+    set(MINHOOK_HDE "${minhook_SOURCE_DIR}/src/hde/hde32.c")
+endif()
+
+set(MINHOOK_SOURCES
+    ${minhook_SOURCE_DIR}/src/buffer.c
+    ${minhook_SOURCE_DIR}/src/hook.c
+    ${minhook_SOURCE_DIR}/src/trampoline.c
+    ${MINHOOK_HDE}
+)
 
 # 2. Fetch ImGui
 FetchContent_Declare(
@@ -54,6 +70,7 @@ set(SOURCES
     src/gui/menu.cpp
     src/hooks/hooks.cpp
     ${IMGUI_SOURCES}
+    ${MINHOOK_SOURCES}
 )
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
@@ -61,12 +78,14 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE
     src
     src/minhook
+    ${minhook_SOURCE_DIR}/include
+    ${minhook_SOURCE_DIR}/src
+    ${minhook_SOURCE_DIR}/src/hde
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    minhook
     opengl32
     gdi32
     user32
