@@ -7,7 +7,7 @@
 #include "minhook/MinHook.h"
 #include <imgui.h>
 #include <imgui_impl_win32.h>
-#include <imgui_impl_opengl2.h>
+#include <imgui_impl_opengl3.h>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -28,10 +28,12 @@ static LRESULT CALLBACK hook_wndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM 
 
     if (menuVisible) {
         ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
-        // Block mouse clicks from reaching the game while menu is open
-        if (msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST) {
-            ImGuiIO& io = ImGui::GetIO();
-            if (io.WantCaptureMouse) return 0;
+        ImGuiIO& io = ImGui::GetIO();
+        if (io.WantCaptureMouse && (msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST)) {
+            return 0;
+        }
+        if (io.WantCaptureKeyboard && (msg >= WM_KEYFIRST && msg <= WM_KEYLAST)) {
+            return 0;
         }
     }
 
@@ -39,6 +41,10 @@ static LRESULT CALLBACK hook_wndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM 
 }
 
 static BOOL WINAPI hook_wglSwapBuffers(HDC hdc) {
+    if (!wglGetCurrentContext()) {
+        return orig_wglSwapBuffers(hdc);
+    }
+
     if (!imgui_initialized) {
         HWND currentHwnd = WindowFromDC(hdc);
         if (currentHwnd) {
@@ -51,21 +57,21 @@ static BOOL WINAPI hook_wglSwapBuffers(HDC hdc) {
             GUI::setupStyle();
 
             ImGui_ImplWin32_Init(hwnd);
-            ImGui_ImplOpenGL2_Init();
+            ImGui_ImplOpenGL3_Init("#version 120");
 
             imgui_initialized = true;
         }
     }
 
-    if (imgui_initialized) {
-        ImGui_ImplOpenGL2_NewFrame();
+    if (imgui_initialized && menuVisible) {
+        ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
         GUI::render();
 
         ImGui::Render();
-        ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 
     return orig_wglSwapBuffers(hdc);
@@ -115,6 +121,11 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     case DLL_PROCESS_DETACH:
         if (orig_wndProc && hwnd) {
             SetWindowLongPtrA(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(orig_wndProc));
+        }
+        if (imgui_initialized) {
+            ImGui_ImplOpenGL3_Shutdown();
+            ImGui_ImplWin32_Shutdown();
+            ImGui::DestroyContext();
         }
         Hooks::remove();
         break;
