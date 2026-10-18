@@ -1,0 +1,10 @@
+build/
+bin/
+out/
+.vs/
+.vscode/
+*.user
+*.suo
+*.VC.db
+*.opendb
+scarletutils_2113.ini

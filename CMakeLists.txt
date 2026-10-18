@@ -1,0 +1,72 @@
+cmake_minimum_required(VERSION 3.20)
+project(scarletutils_2113 LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Note: Geometry Dash 2.113 is a 32-bit (x86) application.
+# Make sure to configure CMake with: cmake -B build -A Win32
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(WARNING "Geometry Dash 2.113 is a 32-bit application. Be sure to configure with -A Win32 when targeting MSVC.")
+endif()
+
+include(FetchContent)
+
+# 1. Fetch MinHook
+FetchContent_Declare(
+    minhook
+    GIT_REPOSITORY https://github.com/TsudaKageyu/minhook.git
+    GIT_TAG        v1.3.3
+)
+FetchContent_MakeAvailable(minhook)
+
+# 2. Fetch ImGui
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG        v1.90.4
+)
+FetchContent_GetProperties(imgui)
+if(NOT imgui_POPULATED)
+    FetchContent_Populate(imgui)
+endif()
+
+set(IMGUI_SOURCES
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl2.cpp
+)
+
+set(SOURCES
+    src/dllmain.cpp
+    src/globals.cpp
+    src/config.cpp
+    src/gui/menu.cpp
+    src/hooks/hooks.cpp
+    ${IMGUI_SOURCES}
+)
+
+add_library(${PROJECT_NAME} SHARED ${SOURCES})
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    src
+    src/minhook
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    minhook
+    opengl32
+    gdi32
+    user32
+    kernel32
+)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    OUTPUT_NAME "scarletutils_2113"
+    PREFIX ""
+)

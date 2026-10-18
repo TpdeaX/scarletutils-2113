@@ -1,0 +1,353 @@
+#pragma once
+#include <windows.h>
+#include <cstdint>
+#include <vector>
+#include <string>
+#include <cmath>
+
+namespace gd {
+
+// Common types & vectors
+struct CCPoint {
+    float x;
+    float y;
+    CCPoint() : x(0.0f), y(0.0f) {}
+    CCPoint(float _x, float _y) : x(_x), y(_y) {}
+};
+
+struct CCSize {
+    float width;
+    float height;
+    CCSize() : width(0.0f), height(0.0f) {}
+    CCSize(float _w, float _h) : width(_w), height(_h) {}
+};
+
+struct CCRect {
+    CCPoint origin;
+    CCSize size;
+    CCRect() : origin(), size() {}
+    CCRect(float x, float y, float w, float h) : origin(x, y), size(w, h) {}
+};
+
+struct ccColor3B {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+};
+
+struct ccColor4B {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+    uint8_t a;
+};
+
+struct ccHSVValue {
+    float h;
+    float s;
+    float v;
+    bool absoluteSaturation;
+    bool absoluteBrightness;
+};
+
+// Forward declarations
+class CCObject;
+class CCNode;
+class CCArray;
+class CCDictionary;
+class CCSprite;
+class PlayerObject;
+class GameObject;
+class GJBaseGameLayer;
+class PlayLayer;
+class LevelSettingsObject;
+class CheckpointObject;
+
+// Cocos2d-x minimal classes
+class CCObject {
+public:
+    virtual ~CCObject() {}
+    int m_uReference;
+    int m_uAutoReleaseCount;
+};
+
+class CCArray : public CCObject {
+public:
+    struct cc_array {
+        unsigned int num;
+        unsigned int max;
+        CCObject** arr;
+    } *data;
+
+    unsigned int count() const {
+        return data ? data->num : 0;
+    }
+
+    CCObject* objectAtIndex(unsigned int index) {
+        if (!data || index >= data->num) return nullptr;
+        return data->arr[index];
+    }
+};
+
+class CCNode : public CCObject {
+public:
+    virtual ~CCNode() {}
+    virtual void setPosition(const CCPoint& pos) { m_obPosition = pos; }
+    virtual const CCPoint& getPosition() const { return m_obPosition; }
+    virtual float getPositionX() const { return m_obPosition.x; }
+    virtual float getPositionY() const { return m_obPosition.y; }
+    virtual void setVisible(bool visible) { m_bVisible = visible; }
+    virtual bool isVisible() const { return m_bVisible; }
+    virtual void setScale(float scale) { m_fScaleX = m_fScaleY = scale; }
+    virtual void setRotation(float rot) { m_fRotationX = m_fRotationY = rot; }
+    virtual void setOpacity(uint8_t opacity) {}
+    virtual void addChild(CCNode* child, int zOrder = 0, int tag = -1) {}
+    virtual void removeChild(CCNode* child, bool cleanup = true) {}
+    virtual CCNode* getChildByTag(int tag) { return nullptr; }
+    virtual void runAction(void* action) {}
+
+    float m_fRotationX;
+    float m_fRotationY;
+    float m_fScaleX;
+    float m_fScaleY;
+    float m_fVertexZ;
+    CCPoint m_obPosition;
+    float m_fSkewX;
+    float m_fSkewY;
+    CCPoint m_obAnchorPointInPoints;
+    CCPoint m_obAnchorPoint;
+    CCSize m_obContentSize;
+    void* m_pCamera;
+    void* m_pGrid;
+    int m_nZOrder;
+    CCArray* m_pChildren;
+    CCNode* m_pParent;
+    void* m_pUserData;
+    int m_nTag;
+    int m_nOrderOfArrival;
+    void* m_pGLServerState;
+    void* m_pShaderProgram;
+    int m_eGLServerState;
+    bool m_bRunning;
+    bool m_bTransformDirty;
+    bool m_bInverseDirty;
+    bool m_bAdditionalTransformDirty;
+    bool m_bVisible;
+};
+
+class CCLayer : public CCNode {
+public:
+    virtual ~CCLayer() {}
+};
+
+class CCLayerColor : public CCLayer {
+public:
+    virtual ~CCLayerColor() {}
+};
+
+// Enums from Geometry Dash
+enum class GameObjectType {
+    Solid = 0,
+    Hazard = 2,
+    InverseGravityPortal = 3,
+    NormalGravityPortal = 4,
+    ShipPortal = 5,
+    CubePortal = 6,
+    Decoration = 7,
+    YellowJumpPad = 8,
+    PinkJumpPad = 9,
+    GravityPad = 10,
+    YellowJumpRing = 11,
+    PinkJumpRing = 12,
+    GravityRing = 13,
+    InverseMirrorPortal = 14,
+    NormalMirrorPortal = 15,
+    BallPortal = 16,
+    RegularSizePortal = 17,
+    MiniSizePortal = 18,
+    UfoPortal = 19,
+    Modifier = 20,
+    Breakable = 21,
+    SecretCoin = 22,
+    DualPortal = 23,
+    SoloPortal = 24,
+    Slope = 25,
+    WavePortal = 26,
+    RobotPortal = 27,
+    TeleportPortal = 28,
+    GreenRing = 29,
+    Collectible = 30,
+    UserCoin = 31,
+    DropRing = 32, // Black orb
+    SpiderPortal = 33,
+    RedJumpPad = 34,
+    RedJumpRing = 35,
+    CustomRing = 36,
+    DashRing = 37,
+    GravityDashRing = 38,
+    CollisionObject = 39,
+    Special = 40
+};
+
+enum class PlayerButton {
+    Jump = 1,
+    Left = 2,
+    Right = 3
+};
+
+// Game Object
+class GameObject : public CCNode {
+public:
+    virtual ~GameObject() {}
+
+    uint8_t pad_0[0x140];
+    int m_nObjectID;           // Object ID (e.g. 32 = black orb, 37 = dash ring)
+    uint8_t pad_1[0x4];
+    int m_nObjectType;         // GameObjectType
+    uint8_t pad_2[0x40];
+    bool m_bIsHidden;          // Hides object rendering
+    bool m_bHasNoGlow;         // Glow disabled
+    bool m_bHasNoEffects;      // Effects disabled
+    bool m_bIsNoTouch;
+    uint8_t pad_3[0x80];
+
+    // GD 2.113 methods
+    void addGlow();
+    void playShineEffect();
+};
+
+class EffectGameObject : public GameObject {
+public:
+    virtual ~EffectGameObject() {}
+};
+
+class RingObject : public EffectGameObject {
+public:
+    virtual ~RingObject() {}
+    void spawnCircle();
+};
+
+// Player Object
+class PlayerObject : public GameObject {
+public:
+    virtual ~PlayerObject() {}
+
+    // Offsets verified with GD 2.113 bindings (0x480 - 0x680)
+    uint8_t pad_player0[0x36C];
+    bool m_isHolding;          // 0x611
+    bool m_hasJustHeld;        // 0x612
+    bool m_isHolding2;         // 0x613
+    bool m_hasJustHeld2;       // 0x614
+    uint8_t pad_player1[0x13];
+    double m_yVelocity;        // 0x628
+    bool m_isOnSlope;          // 0x630
+    bool m_wasOnSlope;         // 0x631
+    uint8_t pad_player2[0x4];
+    bool m_isShip;             // 0x636
+    bool m_isBird;             // 0x637
+    bool m_isBall;             // 0x638
+    bool m_isDart;             // 0x639
+    bool m_isRobot;            // 0x63A
+    bool m_isSpider;           // 0x63B
+    bool m_isUpsideDown;       // 0x63C
+    bool m_isDead;             // 0x63D
+    bool m_isOnGround;         // 0x63E
+    bool m_isDashing;          // 0x63F
+    float m_vehicleSize;       // 0x640
+    float m_playerSpeed;       // 0x644
+    CCPoint m_unk64C;          // 0x648
+    CCPoint m_lastPortalPos;   // 0x650
+    void* m_unk65C;            // 0x658
+    bool m_isSliding;          // 0x65C
+    bool m_isRising;           // 0x65D
+    bool m_isLocked;           // 0x65E
+    CCPoint m_lastGroundedPos; // 0x660
+    CCArray* m_touchingRings;  // 0x668
+    GameObject* m_lastActivatedPortal; // 0x66C
+
+    // 2.113 methods
+    void pushButton(int button);
+    void releaseButton(int button);
+    void playDeathEffect();
+    void stopDashing();
+    void spawnPortalCircle(ccColor3B color, float radius);
+    void propellPlayer(float yVelocity);
+    void ringJump(GameObject* obj);
+};
+
+// GJBaseGameLayer
+class GJBaseGameLayer : public CCLayer {
+public:
+    virtual ~GJBaseGameLayer() {}
+
+    uint8_t pad_bgl0[0x180];
+    PlayerObject* m_pPlayer1;             // 0x224
+    PlayerObject* m_pPlayer2;             // 0x228
+    LevelSettingsObject* m_levelSettings; // 0x22C
+    uint8_t pad_bgl1[0x10];
+    CCArray* m_objects;                   // 0x240
+    uint8_t pad_bgl2[0x88];
+    bool m_bIsDualMode;                   // 0x2CC
+
+    // 2.113 methods
+    void pushButton(int button, bool isPlayer2);
+    void releaseButton(int button, bool isPlayer2);
+    void bumpPlayer(PlayerObject* player, GameObject* object);
+};
+
+// PlayLayer
+class PlayLayer : public GJBaseGameLayer {
+public:
+    virtual ~PlayLayer() {}
+
+    static PlayLayer* get();
+
+    void addObject(GameObject* object);
+    void destroyPlayer(PlayerObject* player, GameObject* object);
+    void resetLevel();
+    void startGame();
+    void showEndLayer();
+    void showNewBest(bool newReward, int orbs, int diamonds, bool demonKey, bool noRetry, bool noTitle);
+    void playGravityEffect(bool flip);
+    void onEnterTransitionDidFinish();
+    void toggleGlitter(bool enable);
+    void update(float dt);
+};
+
+// Level Settings
+class LevelSettingsObject : public CCObject {
+public:
+    uint8_t pad[0x100];
+    bool m_twoPlayerMode;
+};
+
+// CCBlockLayer
+class CCBlockLayer : public CCLayerColor {
+public:
+    virtual ~CCBlockLayer() {}
+    virtual void customSetup() {}
+    virtual void showLayer(bool instant) {}
+};
+
+// Pause Layer
+class PauseLayer : public CCBlockLayer {
+public:
+    virtual ~PauseLayer() {}
+    virtual void customSetup();
+};
+
+// EndLevelLayer
+class EndLevelLayer : public CCLayer {
+public:
+    virtual ~EndLevelLayer() {}
+    void customSetup();
+};
+
+// CCCircleWave
+class CCCircleWave : public CCNode {
+public:
+    virtual ~CCCircleWave() {}
+    virtual void draw();
+};
+
+} // namespace gd
