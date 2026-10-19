@@ -83,15 +83,21 @@ public:
         unsigned int num;
         unsigned int max;
         CCObject** arr;
-    } *data;
+    };
 
-    unsigned int count() const {
-        return data ? data->num : 0;
+    cc_array* getArrayData() const {
+        return *reinterpret_cast<cc_array* const*>(uintptr_t(this) + 0x20);
     }
 
-    CCObject* objectAtIndex(unsigned int index) {
-        if (!data || index >= data->num) return nullptr;
-        return data->arr[index];
+    unsigned int count() const {
+        auto d = getArrayData();
+        return d ? d->num : 0;
+    }
+
+    CCObject* objectAtIndex(unsigned int index) const {
+        auto d = getArrayData();
+        if (!d || !d->arr || index >= d->num) return nullptr;
+        return d->arr[index];
     }
 };
 
@@ -202,16 +208,40 @@ class GameObject : public CCNode {
 public:
     virtual ~GameObject() {}
 
-    uint8_t pad_0[0x140];
-    int m_nObjectID;           // Object ID (e.g. 32 = black orb, 37 = dash ring)
-    uint8_t pad_1[0x4];
-    int m_nObjectType;         // GameObjectType
-    uint8_t pad_2[0x40];
-    bool m_bIsHidden;          // Hides object rendering
-    bool m_bHasNoGlow;         // Glow disabled
-    bool m_bHasNoEffects;      // Effects disabled
-    bool m_bIsNoTouch;
-    uint8_t pad_3[0x80];
+    int getObjectType() const {
+        return *reinterpret_cast<const int*>(uintptr_t(this) + 0x300);
+    }
+    void setObjectType(int t) {
+        *reinterpret_cast<int*>(uintptr_t(this) + 0x300) = t;
+    }
+
+    int getObjectID() const {
+        return *reinterpret_cast<const int*>(uintptr_t(this) + 0x360);
+    }
+    void setObjectID(int id) {
+        *reinterpret_cast<int*>(uintptr_t(this) + 0x360) = id;
+    }
+
+    bool isHidden() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x347);
+    }
+    void setHidden(bool h) {
+        *reinterpret_cast<bool*>(uintptr_t(this) + 0x347) = h;
+    }
+
+    bool hasNoGlow() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x353);
+    }
+    void setNoGlow(bool g) {
+        *reinterpret_cast<bool*>(uintptr_t(this) + 0x353) = g;
+    }
+
+    bool hasNoEffects() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x364);
+    }
+    void setNoEffects(bool e) {
+        *reinterpret_cast<bool*>(uintptr_t(this) + 0x364) = e;
+    }
 
     // GD 2.113 methods
     void addGlow();
@@ -234,43 +264,69 @@ class PlayerObject : public GameObject {
 public:
     virtual ~PlayerObject() {}
 
-    // Offsets verified with GD 2.113 bindings (0x480 - 0x680)
-    uint8_t pad_player0[0x36C];
-    bool m_isHolding;          // 0x611
-    bool m_hasJustHeld;        // 0x612
-    bool m_isHolding2;         // 0x613
-    bool m_hasJustHeld2;       // 0x614
-    uint8_t pad_player1[0x13];
-    double m_yVelocity;        // 0x628
-    bool m_isOnSlope;          // 0x630
-    bool m_wasOnSlope;         // 0x631
-    uint8_t pad_player2[0x4];
-    bool m_isShip;             // 0x636
-    bool m_isBird;             // 0x637
-    bool m_isBall;             // 0x638
-    bool m_isDart;             // 0x639
-    bool m_isRobot;            // 0x63A
-    bool m_isSpider;           // 0x63B
-    bool m_isUpsideDown;       // 0x63C
-    bool m_isDead;             // 0x63D
-    bool m_isOnGround;         // 0x63E
-    bool m_isDashing;          // 0x63F
-    float m_vehicleSize;       // 0x640
-    float m_playerSpeed;       // 0x644
-    CCPoint m_unk64C;          // 0x648
-    CCPoint m_lastPortalPos;   // 0x650
-    void* m_unk65C;            // 0x658
-    bool m_isSliding;          // 0x65C
-    bool m_isRising;           // 0x65D
-    bool m_isLocked;           // 0x65E
-    CCPoint m_lastGroundedPos; // 0x660
-    CCArray* m_touchingRings;  // 0x668
-    GameObject* m_lastActivatedPortal; // 0x66C
-    uint8_t pad_player3[0xC];
-    CCPoint m_position;        // 0x67C (x at 0x67C, y at 0x680)
+    // GD 2.113 verified fields
+    bool isHolding() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x611);
+    }
+    void setHolding(bool h) {
+        *reinterpret_cast<bool*>(uintptr_t(this) + 0x611) = h;
+    }
 
-    float getPositionX() const { return m_position.x; }
-    float getPositionY() const { return m_position.y; }
+    bool hasJustHeld() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x612);
+    }
+    void setHasJustHeld(bool h) {
+        *reinterpret_cast<bool*>(uintptr_t(this) + 0x612) = h;
+    }
+
+    double getYVelocity() const {
+        return *reinterpret_cast<const double*>(uintptr_t(this) + 0x628);
+    }
+    void setYVelocity(double v) {
+        *reinterpret_cast<double*>(uintptr_t(this) + 0x628) = v;
+    }
+
+    bool isShip() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x638);
+    }
+    bool isBird() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x639);
+    }
+    bool isBall() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63a);
+    }
+    bool isDart() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63b);
+    }
+    bool isRobot() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63c);
+    }
+    bool isSpider() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63d);
+    }
+    bool isUpsideDown() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63e);
+    }
+    bool isOnGround() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63f);
+    }
+    bool isDead() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x662);
+    }
+
+    CCArray* getTouchingRings() const {
+        return *reinterpret_cast<CCArray* const*>(uintptr_t(this) + 0x66c);
+    }
+
+    float getPositionX() const {
+        return *reinterpret_cast<const float*>(uintptr_t(this) + 0x67c);
+    }
+    float getPositionY() const {
+        return *reinterpret_cast<const float*>(uintptr_t(this) + 0x680);
+    }
+    void setPositionY(float y) {
+        *reinterpret_cast<float*>(uintptr_t(this) + 0x680) = y;
+    }
 
     // 2.113 methods
     void pushButton(int button);
@@ -287,19 +343,19 @@ class GJBaseGameLayer : public CCLayer {
 public:
     virtual ~GJBaseGameLayer() {}
 
-    uint8_t pad_bgl0[0x180];
-    PlayerObject* m_pPlayer1;             // 0x224
-    PlayerObject* m_pPlayer2;             // 0x228
-    LevelSettingsObject* m_levelSettings; // 0x22C
-    uint8_t pad_bgl1[0x10];
-    CCArray* m_objects;                   // 0x240
-    uint8_t pad_bgl2[0x88];
-    bool m_bIsDualMode;                   // 0x2CC
+    PlayerObject* getPlayer1() const {
+        return *reinterpret_cast<PlayerObject* const*>(uintptr_t(this) + 0x224);
+    }
+    PlayerObject* getPlayer2() const {
+        return *reinterpret_cast<PlayerObject* const*>(uintptr_t(this) + 0x228);
+    }
+    bool isDualMode() const {
+        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x2cc);
+    }
 
     // 2.113 methods
     void pushButton(int button, bool isPlayer2);
     void releaseButton(int button, bool isPlayer2);
-    void bumpPlayer(PlayerObject* player, GameObject* object);
 };
 
 // PlayLayer
