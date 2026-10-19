@@ -98,19 +98,15 @@ public:
 class CCNode : public CCObject {
 public:
     virtual ~CCNode() {}
-    virtual void setPosition(const CCPoint& pos) { m_obPosition = pos; }
-    virtual const CCPoint& getPosition() const { return m_obPosition; }
-    virtual float getPositionX() const { return m_obPosition.x; }
-    virtual float getPositionY() const { return m_obPosition.y; }
-    virtual void setVisible(bool visible) { m_bVisible = visible; }
-    virtual bool isVisible() const { return m_bVisible; }
-    virtual void setScale(float scale) { m_fScaleX = m_fScaleY = scale; }
-    virtual void setRotation(float rot) { m_fRotationX = m_fRotationY = rot; }
-    virtual void setOpacity(uint8_t opacity) {}
-    virtual void addChild(CCNode* child, int zOrder = 0, int tag = -1) {}
-    virtual void removeChild(CCNode* child, bool cleanup = true) {}
-    virtual CCNode* getChildByTag(int tag) { return nullptr; }
-    virtual void runAction(void* action) {}
+    void setPosition(const CCPoint& pos) { m_obPosition = pos; }
+    const CCPoint& getPosition() const { return m_obPosition; }
+    float getPositionX() const { return m_obPosition.x; }
+    float getPositionY() const { return m_obPosition.y; }
+    void setVisible(bool visible) { m_bVisible = visible; }
+    bool isVisible() const { return m_bVisible; }
+    void setScale(float scale) { m_fScaleX = m_fScaleY = scale; }
+    void setRotation(float rot) { m_fRotationX = m_fRotationY = rot; }
+    void setOpacity(uint8_t opacity) {}
 
     float m_fRotationX;
     float m_fRotationY;
@@ -270,6 +266,11 @@ public:
     CCPoint m_lastGroundedPos; // 0x660
     CCArray* m_touchingRings;  // 0x668
     GameObject* m_lastActivatedPortal; // 0x66C
+    uint8_t pad_player3[0xC];
+    CCPoint m_position;        // 0x67C (x at 0x67C, y at 0x680)
+
+    float getPositionX() const { return m_position.x; }
+    float getPositionY() const { return m_position.y; }
 
     // 2.113 methods
     void pushButton(int button);

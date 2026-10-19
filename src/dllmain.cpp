@@ -18,24 +18,26 @@ static WNDPROC orig_wndProc = nullptr;
 static bool imgui_initialized = false;
 
 static LRESULT CALLBACK hook_wndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    if (msg == WM_KEYDOWN) {
-        // Toggle menu on 'F' key (0x46) or TAB (VK_TAB)
-        if (wParam == 'F' || wParam == VK_TAB) {
-            menuVisible = !menuVisible;
-            return 0;
+    __try {
+        if (msg == WM_KEYDOWN) {
+            // Toggle menu on 'F' key (0x46) or TAB (VK_TAB)
+            if (wParam == 'F' || wParam == VK_TAB) {
+                menuVisible = !menuVisible;
+                return 0;
+            }
         }
-    }
 
-    if (menuVisible) {
-        ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
-        ImGuiIO& io = ImGui::GetIO();
-        if (io.WantCaptureMouse && (msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST)) {
-            return 0;
+        if (menuVisible) {
+            ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
+            ImGuiIO& io = ImGui::GetIO();
+            if (io.WantCaptureMouse && (msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST)) {
+                return 0;
+            }
+            if (io.WantCaptureKeyboard && (msg >= WM_KEYFIRST && msg <= WM_KEYLAST)) {
+                return 0;
+            }
         }
-        if (io.WantCaptureKeyboard && (msg >= WM_KEYFIRST && msg <= WM_KEYLAST)) {
-            return 0;
-        }
-    }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
 
     return CallWindowProcA(orig_wndProc, hWnd, msg, wParam, lParam);
 }
@@ -64,20 +66,28 @@ static BOOL WINAPI hook_wglSwapBuffers(HDC hdc) {
     }
 
     if (imgui_initialized && menuVisible) {
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplWin32_NewFrame();
-        ImGui::NewFrame();
+        __try {
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplWin32_NewFrame();
+            ImGui::NewFrame();
 
-        GUI::render();
+            GUI::render();
 
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
     }
 
     return orig_wglSwapBuffers(hdc);
 }
 
 static DWORD WINAPI MainThread(LPVOID lpParam) {
+    FILE* f = fopen("scarletutils.log", "w");
+    if (f) {
+        fprintf(f, "[ScarletUtils] MainThread started!\n");
+        fclose(f);
+    }
+
     // 1. Resolve base address of Geometry Dash
     gd_base = reinterpret_cast<uintptr_t>(GetModuleHandleA(NULL));
 
