@@ -273,8 +273,14 @@ static void __fastcall hook_playLayer_dtor(gd::PlayLayer* self, void* edx) {
 // Hook: PlayLayer::destroyPlayer
 static void __fastcall hook_playLayer_destroyPlayer(gd::PlayLayer* self, void* edx, gd::PlayerObject* player, gd::GameObject* object) {
     __try {
-        if (!player || player->isDead()) {
+        if (!self || !player) {
             if (orig_playLayer_destroyPlayer) orig_playLayer_destroyPlayer(self, player, object);
+            return;
+        }
+
+        // Prevent recursive / multi-frame re-triggering while dead
+        bool isAlreadyDead = *reinterpret_cast<const bool*>(uintptr_t(self) + 0x39C);
+        if (isAlreadyDead) {
             return;
         }
 
@@ -356,7 +362,20 @@ static void __fastcall hook_playLayer_startGame(gd::PlayLayer* self, void* edx) 
 
 // Hook: PlayLayer::showEndLayer
 static void __fastcall hook_playLayer_showEndLayer(gd::PlayLayer* self, void* edx) {
-    if (!hideEndscreen && orig_playLayer_showEndLayer) {
+    if (hideEndscreen) {
+        bool isDead = false;
+        __try {
+            if (self) isDead = *reinterpret_cast<const bool*>(uintptr_t(self) + 0x39C);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
+
+        if (isDead && orig_playLayer_resetLevel) {
+            orig_playLayer_resetLevel(self);
+            return;
+        }
+        return;
+    }
+
+    if (orig_playLayer_showEndLayer) {
         orig_playLayer_showEndLayer(self);
     }
 }
@@ -409,18 +428,14 @@ static void __fastcall hook_playLayer_update(gd::PlayLayer* self, void* edx, flo
             if (orig_playLayer_toggleGlitter) {
                 orig_playLayer_toggleGlitter(self, false);
             }
-            void* bg = *reinterpret_cast<void**>(uintptr_t(self) + 0x384);
-            if (bg && fnSetColorSprite) {
-                fnSetColorSprite(bg, layoutModeColorBackground);
-            }
-            void* ground = *reinterpret_cast<void**>(uintptr_t(self) + 0x3C4);
-            if (ground && fnSetColorLayer) {
-                fnSetColorLayer(ground, layoutModeColorGround);
-            }
+            Hooks::applyLayoutModeColors(self);
         }
 
-        gd::PlayerObject* p1 = self->getPlayer1();
-        gd::PlayerObject* p2 = self->getPlayer2();
+        // DO NOT process player movements or inputs while dead!
+        bool isDead = *reinterpret_cast<const bool*>(uintptr_t(self) + 0x39C);
+        if (!isDead) {
+            gd::PlayerObject* p1 = self->getPlayer1();
+            gd::PlayerObject* p2 = self->getPlayer2();
 
         // 0. Rings & Orbs handling
         auto processRings = [&](gd::PlayerObject* player, bool isP2) {
@@ -556,7 +571,8 @@ static void __fastcall hook_playLayer_update(gd::PlayLayer* self, void* edx, flo
             autoclickerTimerP2++;
         }
 
-        runMaintainGravity(self);
+            runMaintainGravity(self);
+        }
     } __except (EXCEPTION_EXECUTE_HANDLER) {}
 
     if (orig_playLayer_update) {
@@ -565,6 +581,46 @@ static void __fastcall hook_playLayer_update(gd::PlayLayer* self, void* edx, flo
 }
 
 namespace Hooks {
+
+void applyLayoutModeColors(gd::PlayLayer* layer) {
+    __try {
+        if (!layer) return;
+
+        // 1. Background Sprite (PlayLayer offset 0x348)
+        void* bg = *reinterpret_cast<void**>(uintptr_t(layer) + 0x348);
+        if (bg && fnSetColorSprite) {
+            fnSetColorSprite(bg, layoutModeColorBackground);
+        }
+
+        // 2. Ground 1 (offset 0x38C) and Ground 2 (offset 0x390)
+        typedef void (__thiscall* t_ground_color)(void*, gd::ccColor3B);
+        auto fnGround01 = reinterpret_cast<t_ground_color>(gd_base + OFFSET_GROUND_UPDATECOLOR01);
+        auto fnGround02 = reinterpret_cast<t_ground_color>(gd_base + OFFSET_GROUND_UPDATECOLOR02);
+        auto fnGroundSetColor = reinterpret_cast<t_ground_color>(gd_base + OFFSET_GROUND_SETCOLOR);
+
+        void* g1 = *reinterpret_cast<void**>(uintptr_t(layer) + 0x38C);
+        if (g1) {
+            fnGroundSetColor(g1, layoutModeColorGround);
+            fnGround01(g1, layoutModeColorGround);
+            fnGround02(g1, layoutModeColorGround);
+        }
+
+        void* g2 = *reinterpret_cast<void**>(uintptr_t(layer) + 0x390);
+        if (g2) {
+            fnGroundSetColor(g2, layoutModeColorGround);
+            fnGround01(g2, layoutModeColorGround);
+            fnGround02(g2, layoutModeColorGround);
+        }
+
+        // 3. GJEffectManager (offset 0x124)
+        void* em = *reinterpret_cast<void**>(uintptr_t(layer) + 0x124);
+        if (em) {
+            typedef void (__thiscall* t_em_colors)(void*, gd::ccColor3B, gd::ccColor3B);
+            auto fnEmColors = reinterpret_cast<t_em_colors>(gd_base + OFFSET_EFFECTMANAGER_UPDATECOLORS);
+            fnEmColors(em, layoutModeColorBackground, layoutModeColorGround);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+}
 
 void applyLayoutMode(gd::PlayLayer* layer, bool enable) {
     __try {
@@ -587,16 +643,9 @@ void applyLayoutMode(gd::PlayLayer* layer, bool enable) {
             }
         }
 
-        // 2. Background (offset 0x384) & Ground (offset 0x3C4)
+        // 2. Background and Ground coloring
         if (enable) {
-            void* bg = *reinterpret_cast<void**>(uintptr_t(layer) + 0x384);
-            if (bg && fnSetColorSprite) {
-                fnSetColorSprite(bg, layoutModeColorBackground);
-            }
-            void* ground = *reinterpret_cast<void**>(uintptr_t(layer) + 0x3C4);
-            if (ground && fnSetColorLayer) {
-                fnSetColorLayer(ground, layoutModeColorGround);
-            }
+            applyLayoutModeColors(layer);
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) {}
 }

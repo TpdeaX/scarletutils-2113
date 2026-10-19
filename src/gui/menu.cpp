@@ -98,7 +98,7 @@ void render() {
             // TAB 1: GAMEPLAY
             if (ImGui::BeginTabItem("Gameplay")) {
 
-                ImGui::Checkbox("Flip Input On Death", &flipOnDeath);
+                if (ImGui::Checkbox("Flip Input On Death", &flipOnDeath)) Config::save();
                 if (ImGui::IsItemHovered()) {
                     ImGui::BeginTooltip();
                     ImGui::Text("Flips player input automatically after respawning.");
@@ -110,11 +110,11 @@ void render() {
                     ImGui::OpenPopup("flipOnDeath options");
 
                 if (ImGui::BeginPopup("flipOnDeath options")) {
-                    ImGui::Checkbox("Player 1##flipOnDeath", &flipOnDeathP1);
-                    ImGui::Checkbox("Player 2##flipOnDeath", &flipOnDeathP2);
-                    ImGui::Checkbox("Click Both##flipOnDeath", &flipOnDeathBoth);
-                    ImGui::Checkbox("Swift##flipOnDeath", &flipOnDeathSwift);
-                    ImGui::Checkbox("Unfreeze##flipOnDeath", &flipOnDeathUnfreeze);
+                    if (ImGui::Checkbox("Player 1##flipOnDeath", &flipOnDeathP1)) Config::save();
+                    if (ImGui::Checkbox("Player 2##flipOnDeath", &flipOnDeathP2)) Config::save();
+                    if (ImGui::Checkbox("Click Both##flipOnDeath", &flipOnDeathBoth)) Config::save();
+                    if (ImGui::Checkbox("Swift##flipOnDeath", &flipOnDeathSwift)) Config::save();
+                    if (ImGui::Checkbox("Unfreeze##flipOnDeath", &flipOnDeathUnfreeze)) Config::save();
                     if (ImGui::IsItemHovered()) {
                         ImGui::BeginTooltip();
                         ImGui::Text("Requires frame advance toggle keybind to be set to V.");
@@ -123,33 +123,33 @@ void render() {
                     ImGui::EndPopup();
                 }
 
-                ImGui::Checkbox("Click Green Dash Orbs", &clickGreenDash);
-                ImGui::Checkbox("Click Black Orbs", &clickBlackOrbs);
+                if (ImGui::Checkbox("Click Green Dash Orbs", &clickGreenDash)) Config::save();
+                if (ImGui::Checkbox("Click Black Orbs", &clickBlackOrbs)) Config::save();
 
-                ImGui::Checkbox("Easy Black Orb UFO", &blackOrbUfo);
+                if (ImGui::Checkbox("Easy Black Orb UFO", &blackOrbUfo)) Config::save();
                 if (ImGui::IsItemHovered()) {
                     ImGui::BeginTooltip();
                     ImGui::Text("Won't click black orbs if going up (or down depending on gravity).");
                     ImGui::EndTooltip();
                 }
 
-                ImGui::Checkbox("Click Jump Pads", &clickJumpPads);
+                if (ImGui::Checkbox("Click Jump Pads", &clickJumpPads)) Config::save();
                 if (ImGui::IsItemHovered()) {
                     ImGui::BeginTooltip();
                     ImGui::Text("When hitting pink, yellow or red pads, automatically swift click.");
                     ImGui::EndTooltip();
                 }
 
-                ImGui::Checkbox("Click Gravity Pads", &clickGravityPads);
+                if (ImGui::Checkbox("Click Gravity Pads", &clickGravityPads)) Config::save();
                 if (ImGui::IsItemHovered()) {
                     ImGui::BeginTooltip();
                     ImGui::Text("When hitting blue pads, automatically swift click.");
                     ImGui::EndTooltip();
                 }
 
-                ImGui::Checkbox("Maintain Gravity", &maintainGravity);
+                if (ImGui::Checkbox("Maintain Gravity", &maintainGravity)) Config::save();
 
-                ImGui::Checkbox("Auto Straight Fly", &straightFly);
+                if (ImGui::Checkbox("Auto Straight Fly", &straightFly)) Config::save();
                 if (ImGui::IsItemHovered()) {
                     ImGui::BeginTooltip();
                     ImGui::Text("Attempts to stabilize your ship.");
@@ -179,7 +179,7 @@ void render() {
                     ImGui::EndPopup();
                 }
 
-                ImGui::Checkbox("Auto Straight Ufo", &straightUfo);
+                if (ImGui::Checkbox("Auto Straight Ufo", &straightUfo)) Config::save();
                 if (ImGui::IsItemHovered()) {
                     ImGui::BeginTooltip();
                     ImGui::Text("Stabilizes your UFO on a Y position.");
@@ -219,6 +219,7 @@ void render() {
 
                 if (ImGui::Checkbox("Autoclicker P1", &autoclickerP1)) {
                     autoclickerTimerP1 = INT_MAX;
+                    Config::save();
                 }
 
                 ImGui::SameLine();
@@ -229,17 +230,20 @@ void render() {
                     ImGui::PushItemWidth(100.f);
                     if (ImGui::InputInt("Click every frames##p1", &autoclickerEveryP1, 0, 0)) {
                         autoclickerEveryP1 = (std::max)(autoclickerEveryP1, 0);
+                        Config::save();
                     }
                     if (ImGui::InputInt("Hold for frames##p1", &autoclickerHoldP1, 0, 0)) {
                         autoclickerHoldP1 = (std::max)(autoclickerHoldP1, 1);
+                        Config::save();
                     }
-                    ImGui::Checkbox("Swift##autoclickP1", &autoclickerSwiftP1);
+                    if (ImGui::Checkbox("Swift##autoclickP1", &autoclickerSwiftP1)) Config::save();
                     ImGui::PopItemWidth();
                     ImGui::EndPopup();
                 }
 
                 if (ImGui::Checkbox("Autoclicker P2", &autoclickerP2)) {
                     autoclickerTimerP2 = INT_MAX;
+                    Config::save();
                 }
 
                 ImGui::SameLine();
@@ -250,29 +254,31 @@ void render() {
                     ImGui::PushItemWidth(100.f);
                     if (ImGui::InputInt("Click every frames##p2", &autoclickerEveryP2, 0, 0)) {
                         autoclickerEveryP2 = (std::max)(autoclickerEveryP2, 0);
+                        Config::save();
                     }
                     if (ImGui::InputInt("Hold for frames##p2", &autoclickerHoldP2, 0, 0)) {
                         autoclickerHoldP2 = (std::max)(autoclickerHoldP2, 1);
+                        Config::save();
                     }
-                    ImGui::Checkbox("Swift##autoclickP2", &autoclickerSwiftP2);
+                    if (ImGui::Checkbox("Swift##autoclickP2", &autoclickerSwiftP2)) Config::save();
                     ImGui::PopItemWidth();
                     ImGui::EndPopup();
                 }
 
-                ImGui::Checkbox("Noclip", &noclip);
+                if (ImGui::Checkbox("Noclip", &noclip)) Config::save();
 
                 ImGui::SameLine();
                 if (ImGui::ArrowButton("btn_noclip_opts", ImGuiDir_Right))
                     ImGui::OpenPopup("noclip options");
 
                 if (ImGui::BeginPopup("noclip options")) {
-                    ImGui::Checkbox("Player 1##noclip", &noclipP1);
-                    ImGui::Checkbox("Player 2##noclip", &noclipP2);
+                    if (ImGui::Checkbox("Player 1##noclip", &noclipP1)) Config::save();
+                    if (ImGui::Checkbox("Player 2##noclip", &noclipP2)) Config::save();
                     ImGui::EndPopup();
                 }
 
-                ImGui::Checkbox("Auto Swift", &autoSwift);
-                ImGui::Checkbox("Extra Clicks", &extraClick);
+                if (ImGui::Checkbox("Auto Swift", &autoSwift)) Config::save();
+                if (ImGui::Checkbox("Extra Clicks", &extraClick)) Config::save();
 
                 ImGui::SameLine();
                 if (ImGui::ArrowButton("btn_extraclick_opts", ImGuiDir_Right))
@@ -280,7 +286,9 @@ void render() {
 
                 if (ImGui::BeginPopup("extra click options")) {
                     ImGui::PushItemWidth(100.f);
-                    ImGui::InputInt("Amount##extraclicks", &extraClickAmount, 0, 0);
+                    if (ImGui::InputInt("Amount##extraclicks", &extraClickAmount, 0, 0)) {
+                        Config::save();
+                    }
                     ImGui::PopItemWidth();
                     ImGui::EndPopup();
                 }
@@ -371,27 +379,27 @@ void render() {
                     ImGui::OpenPopup("layout mode options");
 
                 if (ImGui::BeginPopup("layout mode options")) {
-                    static std::array<float, 3> bg = colorToFloat(layoutModeColorBackground);
+                    std::array<float, 3> bg = colorToFloat(layoutModeColorBackground);
                     if (ImGui::ColorEdit3("Background", bg.data())) {
                         layoutModeColorBackground = floatToColor(bg.data());
                         Config::save();
                         if (g_currentPlayLayer && layoutMode) {
-                            Hooks::applyLayoutMode(g_currentPlayLayer, true);
+                            Hooks::applyLayoutModeColors(g_currentPlayLayer);
                         }
                     }
 
-                    static std::array<float, 3> ground = colorToFloat(layoutModeColorGround);
+                    std::array<float, 3> ground = colorToFloat(layoutModeColorGround);
                     if (ImGui::ColorEdit3("Ground", ground.data())) {
                         layoutModeColorGround = floatToColor(ground.data());
                         Config::save();
                         if (g_currentPlayLayer && layoutMode) {
-                            Hooks::applyLayoutMode(g_currentPlayLayer, true);
+                            Hooks::applyLayoutModeColors(g_currentPlayLayer);
                         }
                     }
                     ImGui::EndPopup();
                 }
 
-                ImGui::Checkbox("Restart First Frame", &restartFirstFrame);
+                if (ImGui::Checkbox("Restart First Frame", &restartFirstFrame)) Config::save();
                 if (ImGui::IsItemHovered()) {
                     ImGui::BeginTooltip();
                     ImGui::Text("Useful for rendering levels that break on the first attempt.");

@@ -468,6 +468,14 @@ public:
             return false;
         }
     }
+    bool isDead() const {
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x39C);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
+    }
 
     // 2.113 methods
     void pushButton(int button, bool isPlayer2);

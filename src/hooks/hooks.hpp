@@ -37,10 +37,14 @@ namespace Hooks {
     constexpr uintptr_t OFFSET_CIRCLEWAVE_DRAW        = 0x17100;
 
     constexpr uintptr_t OFFSET_PAUSELAYER_CUSTOMSETUP = 0x1E4620;
-    constexpr uintptr_t OFFSET_ENDLEVEL_CUSTOMSETUP   = 0x94CB0;
+    constexpr uintptr_t OFFSET_EFFECTMANAGER_UPDATECOLORS = 0x11C660;
+    constexpr uintptr_t OFFSET_GROUND_UPDATECOLOR01        = 0x12DB40;
+    constexpr uintptr_t OFFSET_GROUND_UPDATECOLOR02        = 0x12DBA0;
+    constexpr uintptr_t OFFSET_GROUND_SETCOLOR             = 0x12D380;
 
     // Initialize all hooks
     bool install();
     void remove();
     void applyLayoutMode(gd::PlayLayer* layer, bool enable);
+    void applyLayoutModeColors(gd::PlayLayer* layer);
 }
