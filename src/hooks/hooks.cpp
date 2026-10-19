@@ -35,12 +35,6 @@ typedef void (__thiscall* t_playLayer_onEnterTransition)(gd::PlayLayer*);
 typedef void (__thiscall* t_playLayer_toggleGlitter)(gd::PlayLayer*, bool);
 
 typedef void (__thiscall* t_player_playDeathEffect)(gd::PlayerObject*);
-typedef void (__thiscall* t_player_spawnPortalCircle)(gd::PlayerObject*, gd::ccColor3B, float);
-typedef void (__thiscall* t_player_stopDashing)(gd::PlayerObject*);
-
-typedef void (__thiscall* t_gameobj_playShineEffect)(gd::GameObject*);
-typedef void (__thiscall* t_ring_spawnCircle)(gd::RingObject*);
-typedef void (__thiscall* t_circleWave_draw)(void*);
 
 static t_bgl_pushButton         orig_bgl_pushButton         = nullptr;
 static t_bgl_releaseButton      orig_bgl_releaseButton      = nullptr;
@@ -59,12 +53,6 @@ static t_playLayer_onEnterTransition orig_playLayer_onEnterTransition = nullptr;
 static t_playLayer_toggleGlitter orig_playLayer_toggleGlitter = nullptr;
 
 static t_player_playDeathEffect orig_player_playDeathEffect = nullptr;
-static t_player_spawnPortalCircle orig_player_spawnPortalCircle = nullptr;
-static t_player_stopDashing     orig_player_stopDashing     = nullptr;
-
-static t_gameobj_playShineEffect orig_gameobj_playShineEffect = nullptr;
-static t_ring_spawnCircle       orig_ring_spawnCircle       = nullptr;
-static t_circleWave_draw        orig_circleWave_draw        = nullptr;
 
 // Helper to maintain gravity holding state
 static void runMaintainGravity(gd::PlayLayer* layer) {
@@ -116,7 +104,7 @@ static bool __fastcall hook_bgl_pushButton(gd::GJBaseGameLayer* self, void* edx,
     return ret;
 }
 
-// Hook: GJBaseGameLayer::bumpPlayer (__stdcall on GD 2.113 Win32)
+// Hook: GJBaseGameLayer::bumpPlayer (__stdcall in GD 2.113 Win32 at 0x10ED50)
 static void __stdcall hook_bgl_bumpPlayer(gd::PlayerObject* player, gd::GameObject* object) {
     __try {
         if (object && player && g_currentPlayLayer) {
@@ -288,46 +276,6 @@ static void __fastcall hook_player_playDeathEffect(gd::PlayerObject* self, void*
     }
 }
 
-// Hook: PlayerObject::spawnPortalCircle
-static void __fastcall hook_player_spawnPortalCircle(gd::PlayerObject* self, void* edx, gd::ccColor3B color, float radius) {
-    if (!noEffect && orig_player_spawnPortalCircle) {
-        orig_player_spawnPortalCircle(self, color, radius);
-    }
-}
-
-// Hook: PlayerObject::stopDashing
-static void __fastcall hook_player_stopDashing(gd::PlayerObject* self, void* edx) {
-    if (orig_player_stopDashing) {
-        orig_player_stopDashing(self);
-    }
-    optimizeStopDashing = true;
-}
-
-// Hook: RingObject::spawnCircle
-static void __fastcall hook_ring_spawnCircle(gd::RingObject* self, void* edx) {
-    static int lastOrb = 0;
-    int objID = self->getObjectID();
-    if (!noEffect || !(optimizeStackedOrbs && optimizeRingJump && lastOrb == objID)) {
-        if (orig_ring_spawnCircle) orig_ring_spawnCircle(self);
-    }
-    optimizeRingJump = true;
-    lastOrb = objID;
-}
-
-// Hook: GameObject::playShineEffect
-static void __fastcall hook_gameobj_playShineEffect(gd::GameObject* self, void* edx) {
-    if (!noEffect && orig_gameobj_playShineEffect) {
-        orig_gameobj_playShineEffect(self);
-    }
-}
-
-// Hook: CCCircleWave::draw
-static void __fastcall hook_circleWave_draw(void* self, void* edx) {
-    if (!noEffect && orig_circleWave_draw) {
-        orig_circleWave_draw(self);
-    }
-}
-
 // Main Frame Update Loop: PlayLayer::update
 static void __fastcall hook_playLayer_update(gd::PlayLayer* self, void* edx, float dt) {
     __try {
@@ -345,38 +293,41 @@ static void __fastcall hook_playLayer_update(gd::PlayLayer* self, void* edx, flo
 
         // 0. Rings & Orbs handling
         auto processRings = [&](gd::PlayerObject* player, bool isP2) {
-            if (!player) return;
-            gd::CCArray* rings = player->getTouchingRings();
-            if (!rings) return;
-            unsigned int count = rings->count();
-            for (unsigned int i = 0; i < count; i++) {
-                auto obj = static_cast<gd::GameObject*>(rings->objectAtIndex(i));
-                if (!obj) continue;
-                int objType = obj->getObjectType();
+            __try {
+                if (!player) return;
+                gd::CCArray* rings = player->getTouchingRings();
+                if (!rings) return;
+                unsigned int count = rings->count();
+                if (count > 100) return;
+                for (unsigned int i = 0; i < count; i++) {
+                    auto obj = static_cast<gd::GameObject*>(rings->objectAtIndex(i));
+                    if (!obj) continue;
+                    int objType = obj->getObjectType();
 
-                // Green Dash Ring (37)
-                if (objType == (int)gd::GameObjectType::DashRing && clickGreenDash) {
-                    if (orig_bgl_releaseButton) orig_bgl_releaseButton(self, 1, isP2);
-                    if (orig_bgl_pushButton) orig_bgl_pushButton(self, 1, isP2);
-                }
-
-                // Black Orb / Drop Ring (32)
-                if (objType == (int)gd::GameObjectType::DropRing && (clickBlackOrbs || blackOrbUfo || straightUfo)) {
-                    double vel = player->getYVelocity();
-                    bool upsideDown = player->isUpsideDown();
-                    if (clickBlackOrbs || (!upsideDown && vel <= 0.0) || (upsideDown && vel >= 0.0)) {
+                    // Green Dash Ring (37)
+                    if (objType == (int)gd::GameObjectType::DashRing && clickGreenDash) {
                         if (orig_bgl_releaseButton) orig_bgl_releaseButton(self, 1, isP2);
                         if (orig_bgl_pushButton) orig_bgl_pushButton(self, 1, isP2);
                     }
-                }
 
-                // Gravity Orbs (13, 29, 38)
-                if ((objType == (int)gd::GameObjectType::GravityRing ||
-                     objType == (int)gd::GameObjectType::GreenRing ||
-                     objType == (int)gd::GameObjectType::GravityDashRing) && maintainGravity) {
-                    if (orig_bgl_releaseButton) orig_bgl_releaseButton(self, 1, isP2);
+                    // Black Orb / Drop Ring (32)
+                    if (objType == (int)gd::GameObjectType::DropRing && (clickBlackOrbs || blackOrbUfo || straightUfo)) {
+                        double vel = player->getYVelocity();
+                        bool upsideDown = player->isUpsideDown();
+                        if (clickBlackOrbs || (!upsideDown && vel <= 0.0) || (upsideDown && vel >= 0.0)) {
+                            if (orig_bgl_releaseButton) orig_bgl_releaseButton(self, 1, isP2);
+                            if (orig_bgl_pushButton) orig_bgl_pushButton(self, 1, isP2);
+                        }
+                    }
+
+                    // Gravity Orbs (13, 29, 38)
+                    if ((objType == (int)gd::GameObjectType::GravityRing ||
+                         objType == (int)gd::GameObjectType::GreenRing ||
+                         objType == (int)gd::GameObjectType::GravityDashRing) && maintainGravity) {
+                        if (orig_bgl_releaseButton) orig_bgl_releaseButton(self, 1, isP2);
+                    }
                 }
-            }
+            } __except (EXCEPTION_EXECUTE_HANDLER) {}
         };
 
         processRings(p1, false);
@@ -519,12 +470,6 @@ bool install() {
     CREATE_HOOK("playLayer_transition",    OFFSET_PLAYLAYER_TRANSITION,    hook_playLayer_onEnterTransition, orig_playLayer_onEnterTransition);
 
     CREATE_HOOK("player_playDeathEffect",  OFFSET_PLAYER_PLAYDEATHEFF,     hook_player_playDeathEffect,   orig_player_playDeathEffect);
-    CREATE_HOOK("player_spawnPortalCircle",OFFSET_PLAYER_SPAWNPORTALCIRC,  hook_player_spawnPortalCircle, orig_player_spawnPortalCircle);
-    CREATE_HOOK("player_stopDashing",      OFFSET_PLAYER_STOPDASHING,      hook_player_stopDashing,       orig_player_stopDashing);
-
-    CREATE_HOOK("gameobj_playShineEff",    OFFSET_GAMEOBJ_PLAYSHINEEFF,    hook_gameobj_playShineEffect,  orig_gameobj_playShineEffect);
-    CREATE_HOOK("ring_spawnCircle",        OFFSET_RINGOBJ_SPAWNCIRCLE,     hook_ring_spawnCircle,         orig_ring_spawnCircle);
-    CREATE_HOOK("circleWave_draw",         OFFSET_CIRCLEWAVE_DRAW,         hook_circleWave_draw,          orig_circleWave_draw);
 
     // Resolve non-hooked helper addresses
     orig_bgl_releaseButton = reinterpret_cast<t_bgl_releaseButton>(gd_base + OFFSET_BGL_RELEASE_BUTTON);

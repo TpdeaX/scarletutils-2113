@@ -86,18 +86,32 @@ public:
     };
 
     cc_array* getArrayData() const {
-        return *reinterpret_cast<cc_array* const*>(uintptr_t(this) + 0x20);
+        __try {
+            if (!this) return nullptr;
+            return *reinterpret_cast<cc_array* const*>(uintptr_t(this) + 0x20);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return nullptr;
+        }
     }
 
     unsigned int count() const {
-        auto d = getArrayData();
-        return d ? d->num : 0;
+        __try {
+            auto d = getArrayData();
+            if (!d) return 0;
+            return d->num < 1000 ? d->num : 0;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return 0;
+        }
     }
 
     CCObject* objectAtIndex(unsigned int index) const {
-        auto d = getArrayData();
-        if (!d || !d->arr || index >= d->num) return nullptr;
-        return d->arr[index];
+        __try {
+            auto d = getArrayData();
+            if (!d || !d->arr || index >= d->num) return nullptr;
+            return d->arr[index];
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return nullptr;
+        }
     }
 };
 
@@ -209,41 +223,60 @@ public:
     virtual ~GameObject() {}
 
     int getObjectType() const {
-        return *reinterpret_cast<const int*>(uintptr_t(this) + 0x300);
+        __try {
+            if (!this) return 0;
+            return *reinterpret_cast<const int*>(uintptr_t(this) + 0x300);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return 0;
+        }
     }
     void setObjectType(int t) {
-        *reinterpret_cast<int*>(uintptr_t(this) + 0x300) = t;
+        __try {
+            if (this) *reinterpret_cast<int*>(uintptr_t(this) + 0x300) = t;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
     }
 
     int getObjectID() const {
-        return *reinterpret_cast<const int*>(uintptr_t(this) + 0x360);
+        __try {
+            if (!this) return 0;
+            return *reinterpret_cast<const int*>(uintptr_t(this) + 0x360);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return 0;
+        }
     }
     void setObjectID(int id) {
-        *reinterpret_cast<int*>(uintptr_t(this) + 0x360) = id;
+        __try {
+            if (this) *reinterpret_cast<int*>(uintptr_t(this) + 0x360) = id;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
     }
 
     bool isHidden() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x347);
-    }
-    void setHidden(bool h) {
-        *reinterpret_cast<bool*>(uintptr_t(this) + 0x347) = h;
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x347);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
 
     bool hasNoGlow() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x353);
-    }
-    void setNoGlow(bool g) {
-        *reinterpret_cast<bool*>(uintptr_t(this) + 0x353) = g;
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x353);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
 
     bool hasNoEffects() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x364);
-    }
-    void setNoEffects(bool e) {
-        *reinterpret_cast<bool*>(uintptr_t(this) + 0x364) = e;
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x364);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
 
-    // GD 2.113 methods
     void addGlow();
     void playShineEffect();
 };
@@ -264,68 +297,136 @@ class PlayerObject : public GameObject {
 public:
     virtual ~PlayerObject() {}
 
-    // GD 2.113 verified fields
     bool isHolding() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x611);
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x611);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
     void setHolding(bool h) {
-        *reinterpret_cast<bool*>(uintptr_t(this) + 0x611) = h;
-    }
-
-    bool hasJustHeld() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x612);
-    }
-    void setHasJustHeld(bool h) {
-        *reinterpret_cast<bool*>(uintptr_t(this) + 0x612) = h;
+        __try {
+            if (this) *reinterpret_cast<bool*>(uintptr_t(this) + 0x611) = h;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
     }
 
     double getYVelocity() const {
-        return *reinterpret_cast<const double*>(uintptr_t(this) + 0x628);
+        __try {
+            if (!this) return 0.0;
+            return *reinterpret_cast<const double*>(uintptr_t(this) + 0x628);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return 0.0;
+        }
     }
     void setYVelocity(double v) {
-        *reinterpret_cast<double*>(uintptr_t(this) + 0x628) = v;
+        __try {
+            if (this) *reinterpret_cast<double*>(uintptr_t(this) + 0x628) = v;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
     }
 
     bool isShip() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x638);
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x638);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
     bool isBird() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x639);
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x639);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
     bool isBall() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63a);
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63a);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
     bool isDart() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63b);
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63b);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
     bool isRobot() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63c);
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63c);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
     bool isSpider() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63d);
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63d);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
     bool isUpsideDown() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63e);
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63e);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
     bool isOnGround() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63f);
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x63f);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
     bool isDead() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x662);
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x662);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
 
     CCArray* getTouchingRings() const {
-        return *reinterpret_cast<CCArray* const*>(uintptr_t(this) + 0x66c);
+        __try {
+            if (!this) return nullptr;
+            return *reinterpret_cast<CCArray* const*>(uintptr_t(this) + 0x66c);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return nullptr;
+        }
     }
 
     float getPositionX() const {
-        return *reinterpret_cast<const float*>(uintptr_t(this) + 0x67c);
+        __try {
+            if (!this) return 0.0f;
+            return *reinterpret_cast<const float*>(uintptr_t(this) + 0x67c);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return 0.0f;
+        }
     }
     float getPositionY() const {
-        return *reinterpret_cast<const float*>(uintptr_t(this) + 0x680);
+        __try {
+            if (!this) return 0.0f;
+            return *reinterpret_cast<const float*>(uintptr_t(this) + 0x680);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return 0.0f;
+        }
     }
     void setPositionY(float y) {
-        *reinterpret_cast<float*>(uintptr_t(this) + 0x680) = y;
+        __try {
+            if (this) *reinterpret_cast<float*>(uintptr_t(this) + 0x680) = y;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
     }
 
     // 2.113 methods
@@ -344,13 +445,28 @@ public:
     virtual ~GJBaseGameLayer() {}
 
     PlayerObject* getPlayer1() const {
-        return *reinterpret_cast<PlayerObject* const*>(uintptr_t(this) + 0x224);
+        __try {
+            if (!this) return nullptr;
+            return *reinterpret_cast<PlayerObject* const*>(uintptr_t(this) + 0x224);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return nullptr;
+        }
     }
     PlayerObject* getPlayer2() const {
-        return *reinterpret_cast<PlayerObject* const*>(uintptr_t(this) + 0x228);
+        __try {
+            if (!this) return nullptr;
+            return *reinterpret_cast<PlayerObject* const*>(uintptr_t(this) + 0x228);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return nullptr;
+        }
     }
     bool isDualMode() const {
-        return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x2cc);
+        __try {
+            if (!this) return false;
+            return *reinterpret_cast<const bool*>(uintptr_t(this) + 0x2cc);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
 
     // 2.113 methods
