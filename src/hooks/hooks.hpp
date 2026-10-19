@@ -41,4 +41,5 @@ namespace Hooks {
     // Initialize all hooks
     bool install();
     void remove();
+    void applyLayoutMode(gd::PlayLayer* layer, bool enable);
 }

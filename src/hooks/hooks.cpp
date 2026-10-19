@@ -4,6 +4,7 @@
 #include <climits>
 #include <algorithm>
 #include <cstdio>
+#include <unordered_set>
 
 // Logging helper for debugging
 static void Log(const char* fmt, ...) {
@@ -25,6 +26,7 @@ typedef void (__stdcall*  t_bgl_bumpPlayer)(gd::PlayerObject*, gd::GameObject*);
 typedef bool (__thiscall* t_playLayer_init)(gd::PlayLayer*, void*);
 typedef void (__thiscall* t_playLayer_dtor)(gd::PlayLayer*);
 typedef void (__thiscall* t_playLayer_update)(gd::PlayLayer*, float);
+typedef void (__thiscall* t_playLayer_addObject)(gd::PlayLayer*, gd::GameObject*);
 typedef void (__thiscall* t_playLayer_destroyPlayer)(gd::PlayLayer*, gd::PlayerObject*, gd::GameObject*);
 typedef void (__thiscall* t_playLayer_resetLevel)(gd::PlayLayer*);
 typedef void (__thiscall* t_playLayer_startGame)(gd::PlayLayer*);
@@ -36,6 +38,14 @@ typedef void (__thiscall* t_playLayer_toggleGlitter)(gd::PlayLayer*, bool);
 
 typedef void (__thiscall* t_player_playDeathEffect)(gd::PlayerObject*);
 
+// Function pointers from libcocos2d.dll
+typedef void (__thiscall* t_set_visible)(void*, bool);
+typedef void (__thiscall* t_set_color)(void*, const gd::ccColor3B&);
+
+static t_set_visible fnSetVisible = nullptr;
+static t_set_color   fnSetColorSprite = nullptr;
+static t_set_color   fnSetColorLayer = nullptr;
+
 static t_bgl_pushButton         orig_bgl_pushButton         = nullptr;
 static t_bgl_releaseButton      orig_bgl_releaseButton      = nullptr;
 static t_bgl_bumpPlayer         orig_bgl_bumpPlayer         = nullptr;
@@ -43,6 +53,7 @@ static t_bgl_bumpPlayer         orig_bgl_bumpPlayer         = nullptr;
 static t_playLayer_init         orig_playLayer_init         = nullptr;
 static t_playLayer_dtor         orig_playLayer_dtor         = nullptr;
 static t_playLayer_update       orig_playLayer_update       = nullptr;
+static t_playLayer_addObject    orig_playLayer_addObject    = nullptr;
 static t_playLayer_destroyPlayer orig_playLayer_destroyPlayer = nullptr;
 static t_playLayer_resetLevel   orig_playLayer_resetLevel   = nullptr;
 static t_playLayer_startGame    orig_playLayer_startGame    = nullptr;
@@ -53,6 +64,68 @@ static t_playLayer_onEnterTransition orig_playLayer_onEnterTransition = nullptr;
 static t_playLayer_toggleGlitter orig_playLayer_toggleGlitter = nullptr;
 
 static t_player_playDeathEffect orig_player_playDeathEffect = nullptr;
+
+static bool s_lastLayoutMode = false;
+
+// Filter set from original ScarletUtils
+static const std::unordered_set<int> s_filterIds = {
+    2015, 15, 16, 17, 221, 743, 744, 899, 900, 915, 1006, 32, 33, 29, 30, 
+    104, 105, 717, 718, 1007, 1520, 2903, 3029, 3030, 3031, 2999, 3606, 3612, 
+    3009, 3010, 3014, 3015, 3021, 3020, 1818, 1819, 1612, 1613, 3608
+};
+
+// Check if an object is decorative and should be hidden in layout mode
+static bool isDecoration(gd::GameObject* obj) {
+    if (!obj) return false;
+    int type = obj->getObjectType();
+    int id = obj->getObjectID();
+
+    // Whitelist: never hide blocks, hazards, pads, orbs, portals, coins
+    if (type == (int)gd::GameObjectType::Solid ||
+        type == (int)gd::GameObjectType::Hazard ||
+        type == (int)gd::GameObjectType::Breakable ||
+        type == (int)gd::GameObjectType::Slope ||
+        type == (int)gd::GameObjectType::YellowJumpPad ||
+        type == (int)gd::GameObjectType::PinkJumpPad ||
+        type == (int)gd::GameObjectType::GravityPad ||
+        type == (int)gd::GameObjectType::RedJumpPad ||
+        type == (int)gd::GameObjectType::YellowJumpRing ||
+        type == (int)gd::GameObjectType::PinkJumpRing ||
+        type == (int)gd::GameObjectType::GravityRing ||
+        type == (int)gd::GameObjectType::GreenRing ||
+        type == (int)gd::GameObjectType::DropRing ||
+        type == (int)gd::GameObjectType::RedJumpRing ||
+        type == (int)gd::GameObjectType::DashRing ||
+        type == (int)gd::GameObjectType::GravityDashRing ||
+        type == (int)gd::GameObjectType::InverseGravityPortal ||
+        type == (int)gd::GameObjectType::NormalGravityPortal ||
+        type == (int)gd::GameObjectType::ShipPortal ||
+        type == (int)gd::GameObjectType::CubePortal ||
+        type == (int)gd::GameObjectType::BallPortal ||
+        type == (int)gd::GameObjectType::UfoPortal ||
+        type == (int)gd::GameObjectType::WavePortal ||
+        type == (int)gd::GameObjectType::RobotPortal ||
+        type == (int)gd::GameObjectType::SpiderPortal ||
+        type == (int)gd::GameObjectType::TeleportPortal ||
+        type == (int)gd::GameObjectType::DualPortal ||
+        type == (int)gd::GameObjectType::SoloPortal ||
+        type == (int)gd::GameObjectType::RegularSizePortal ||
+        type == (int)gd::GameObjectType::MiniSizePortal ||
+        type == (int)gd::GameObjectType::InverseMirrorPortal ||
+        type == (int)gd::GameObjectType::NormalMirrorPortal ||
+        type == (int)gd::GameObjectType::SecretCoin ||
+        type == (int)gd::GameObjectType::UserCoin) {
+        return false;
+    }
+
+    if (id == 44 || id == 38 || id == 749 || id == 747) return false;
+
+    if (type == (int)gd::GameObjectType::Decoration) return true;
+
+    if (s_filterIds.find(id) != s_filterIds.end()) return true;
+
+    return false;
+}
 
 // Helper to maintain gravity holding state
 static void runMaintainGravity(gd::PlayLayer* layer) {
@@ -140,11 +213,30 @@ static void __stdcall hook_bgl_bumpPlayer(gd::PlayerObject* player, gd::GameObje
 // Hook: PlayLayer::init
 static bool __fastcall hook_playLayer_init(gd::PlayLayer* self, void* edx, void* level) {
     g_currentPlayLayer = self;
+    s_lastLayoutMode = layoutMode;
     bool ret = true;
     if (orig_playLayer_init) {
         ret = orig_playLayer_init(self, level);
     }
+    __try {
+        if (layoutMode) {
+            Hooks::applyLayoutMode(self, true);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
     return ret;
+}
+
+// Hook: PlayLayer::addObject
+static void __fastcall hook_playLayer_addObject(gd::PlayLayer* self, void* edx, gd::GameObject* object) {
+    if (orig_playLayer_addObject) {
+        orig_playLayer_addObject(self, object);
+    }
+    __try {
+        if (layoutMode && object && isDecoration(object)) {
+            if (fnSetVisible) fnSetVisible(object, false);
+            else object->setVisible(false);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
 }
 
 // Hook: PlayLayer::~PlayLayer
@@ -190,6 +282,9 @@ static void __fastcall hook_playLayer_resetLevel(gd::PlayLayer* self, void* edx)
     }
 
     __try {
+        if (layoutMode) {
+            Hooks::applyLayoutMode(self, true);
+        }
         if (flipOnDeath && flipPlayer != 0) {
             if ((flipOnDeathP1 && flipPlayer == 1) || flipOnDeathBoth) {
                 if (!flipOnDeathSwift) {
@@ -286,6 +381,11 @@ static void __fastcall hook_playLayer_update(gd::PlayLayer* self, void* edx, flo
 
         if (layoutMode && orig_playLayer_toggleGlitter) {
             orig_playLayer_toggleGlitter(self, false);
+        }
+
+        if (layoutMode != s_lastLayoutMode) {
+            s_lastLayoutMode = layoutMode;
+            Hooks::applyLayoutMode(self, layoutMode);
         }
 
         gd::PlayerObject* p1 = self->getPlayer1();
@@ -435,8 +535,58 @@ static void __fastcall hook_playLayer_update(gd::PlayLayer* self, void* edx, flo
 
 namespace Hooks {
 
+void applyLayoutMode(gd::PlayLayer* layer, bool enable) {
+    __try {
+        if (!layer) return;
+
+        // 1. Process all level objects in m_objects (offset 0x234)
+        gd::CCArray* objs = *reinterpret_cast<gd::CCArray**>(uintptr_t(layer) + 0x234);
+        if (objs) {
+            unsigned int count = objs->count();
+            if (count < 100000) {
+                for (unsigned int i = 0; i < count; i++) {
+                    auto obj = static_cast<gd::GameObject*>(objs->objectAtIndex(i));
+                    if (!obj) continue;
+                    if (isDecoration(obj)) {
+                        if (fnSetVisible) fnSetVisible(obj, !enable);
+                        else obj->setVisible(!enable);
+                    }
+                }
+            }
+        }
+
+        // 2. Background (offset 0x384) & Ground (offset 0x3C4)
+        if (enable) {
+            void* bg = *reinterpret_cast<void**>(uintptr_t(layer) + 0x384);
+            if (bg && fnSetColorSprite) {
+                fnSetColorSprite(bg, layoutModeColorBackground);
+            }
+            void* ground = *reinterpret_cast<void**>(uintptr_t(layer) + 0x3C4);
+            if (ground && fnSetColorLayer) {
+                fnSetColorLayer(ground, layoutModeColorGround);
+            }
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+}
+
 bool install() {
     Log("[ScarletUtils] Hooks::install() starting...");
+
+    // Resolve cocos2d exports
+    HMODULE hCocos = GetModuleHandleA("libcocos2d.dll");
+    if (hCocos) {
+        fnSetVisible = reinterpret_cast<t_set_visible>(
+            GetProcAddress(hCocos, "?setVisible@CCSprite@cocos2d@@UAEX_N@Z")
+        );
+        fnSetColorSprite = reinterpret_cast<t_set_color>(
+            GetProcAddress(hCocos, "?setColor@CCSprite@cocos2d@@UAEXABU_ccColor3B@2@@Z")
+        );
+        fnSetColorLayer = reinterpret_cast<t_set_color>(
+            GetProcAddress(hCocos, "?setColor@CCLayerRGBA@cocos2d@@UAEXABU_ccColor3B@2@@Z")
+        );
+        Log("[ScarletUtils] Cocos exports resolved: setVisible=%p, setColorSprite=%p, setColorLayer=%p",
+            fnSetVisible, fnSetColorSprite, fnSetColorLayer);
+    }
 
     MH_STATUS initStatus = MH_Initialize();
     if (initStatus != MH_OK && initStatus != MH_ERROR_ALREADY_INITIALIZED) {
@@ -461,6 +611,7 @@ bool install() {
     CREATE_HOOK("playLayer_init",          OFFSET_PLAYLAYER_INIT,          hook_playLayer_init,          orig_playLayer_init);
     CREATE_HOOK("playLayer_dtor",          OFFSET_PLAYLAYER_DTOR,          hook_playLayer_dtor,          orig_playLayer_dtor);
     CREATE_HOOK("playLayer_update",        OFFSET_PLAYLAYER_UPDATE,        hook_playLayer_update,        orig_playLayer_update);
+    CREATE_HOOK("playLayer_addObject",     OFFSET_PLAYLAYER_ADDOBJECT,     hook_playLayer_addObject,     orig_playLayer_addObject);
     CREATE_HOOK("playLayer_destroyPlayer",  OFFSET_PLAYLAYER_DESTROYPLAYER, hook_playLayer_destroyPlayer, orig_playLayer_destroyPlayer);
     CREATE_HOOK("playLayer_resetLevel",    OFFSET_PLAYLAYER_RESETLEVEL,    hook_playLayer_resetLevel,    orig_playLayer_resetLevel);
     CREATE_HOOK("playLayer_startGame",     OFFSET_PLAYLAYER_STARTGAME,     hook_playLayer_startGame,     orig_playLayer_startGame);

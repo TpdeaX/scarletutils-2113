@@ -8,6 +8,7 @@
 #include "menu.hpp"
 #include "../includes.hpp"
 #include "../config.hpp"
+#include "../hooks/hooks.hpp"
 #include <imgui.h>
 
 namespace GUI {
@@ -358,7 +359,12 @@ void render() {
                     ImGui::EndTooltip();
                 }
 
-                ImGui::Checkbox("Layout Mode", &layoutMode);
+                if (ImGui::Checkbox("Layout Mode", &layoutMode)) {
+                    Config::save();
+                    if (g_currentPlayLayer) {
+                        Hooks::applyLayoutMode(g_currentPlayLayer, layoutMode);
+                    }
+                }
 
                 ImGui::SameLine();
                 if (ImGui::ArrowButton("btn_layout_opts", ImGuiDir_Right))
@@ -368,11 +374,19 @@ void render() {
                     static std::array<float, 3> bg = colorToFloat(layoutModeColorBackground);
                     if (ImGui::ColorEdit3("Background", bg.data())) {
                         layoutModeColorBackground = floatToColor(bg.data());
+                        Config::save();
+                        if (g_currentPlayLayer && layoutMode) {
+                            Hooks::applyLayoutMode(g_currentPlayLayer, true);
+                        }
                     }
 
                     static std::array<float, 3> ground = colorToFloat(layoutModeColorGround);
                     if (ImGui::ColorEdit3("Ground", ground.data())) {
                         layoutModeColorGround = floatToColor(ground.data());
+                        Config::save();
+                        if (g_currentPlayLayer && layoutMode) {
+                            Hooks::applyLayoutMode(g_currentPlayLayer, true);
+                        }
                     }
                     ImGui::EndPopup();
                 }
