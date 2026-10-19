@@ -1,5 +1,6 @@
 #include "hooks.hpp"
 #include "includes.hpp"
+#include "decoration_ids.hpp"
 #include "minhook/MinHook.h"
 #include <climits>
 #include <algorithm>
@@ -38,6 +39,8 @@ typedef void (__thiscall* t_playLayer_toggleGlitter)(gd::PlayLayer*, bool);
 
 typedef void (__thiscall* t_player_playDeathEffect)(gd::PlayerObject*);
 
+typedef void (__thiscall* t_gameobject_setVisible)(gd::GameObject*, bool);
+
 // Function pointers from libcocos2d.dll
 typedef void (__thiscall* t_set_visible)(void*, bool);
 typedef void (__thiscall* t_set_color)(void*, const gd::ccColor3B&);
@@ -64,6 +67,8 @@ static t_playLayer_onEnterTransition orig_playLayer_onEnterTransition = nullptr;
 static t_playLayer_toggleGlitter orig_playLayer_toggleGlitter = nullptr;
 
 static t_player_playDeathEffect orig_player_playDeathEffect = nullptr;
+
+static t_gameobject_setVisible  orig_gameobject_setVisible  = nullptr;
 
 static bool s_lastLayoutMode = false;
 
@@ -122,9 +127,24 @@ static bool isDecoration(gd::GameObject* obj) {
 
     if (type == (int)gd::GameObjectType::Decoration) return true;
 
+    if (s_decorationIds.find(id) != s_decorationIds.end()) return true;
+
     if (s_filterIds.find(id) != s_filterIds.end()) return true;
 
     return false;
+}
+
+// Hook: GameObject::setVisible (__thiscall at 0xE57C0)
+static void __fastcall hook_gameobject_setVisible(gd::GameObject* self, void* edx, bool visible) {
+    __try {
+        if (layoutMode && visible && isDecoration(self)) {
+            visible = false;
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+
+    if (orig_gameobject_setVisible) {
+        orig_gameobject_setVisible(self, visible);
+    }
 }
 
 // Helper to maintain gravity holding state
@@ -233,7 +253,8 @@ static void __fastcall hook_playLayer_addObject(gd::PlayLayer* self, void* edx, 
     }
     __try {
         if (layoutMode && object && isDecoration(object)) {
-            if (fnSetVisible) fnSetVisible(object, false);
+            if (orig_gameobject_setVisible) orig_gameobject_setVisible(object, false);
+            else if (fnSetVisible) fnSetVisible(object, false);
             else object->setVisible(false);
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) {}
@@ -379,13 +400,23 @@ static void __fastcall hook_playLayer_update(gd::PlayLayer* self, void* edx, flo
         optimizeStartDashing = false;
         optimizeStopDashing = false;
 
-        if (layoutMode && orig_playLayer_toggleGlitter) {
-            orig_playLayer_toggleGlitter(self, false);
-        }
-
         if (layoutMode != s_lastLayoutMode) {
             s_lastLayoutMode = layoutMode;
             Hooks::applyLayoutMode(self, layoutMode);
+        }
+
+        if (layoutMode) {
+            if (orig_playLayer_toggleGlitter) {
+                orig_playLayer_toggleGlitter(self, false);
+            }
+            void* bg = *reinterpret_cast<void**>(uintptr_t(self) + 0x384);
+            if (bg && fnSetColorSprite) {
+                fnSetColorSprite(bg, layoutModeColorBackground);
+            }
+            void* ground = *reinterpret_cast<void**>(uintptr_t(self) + 0x3C4);
+            if (ground && fnSetColorLayer) {
+                fnSetColorLayer(ground, layoutModeColorGround);
+            }
         }
 
         gd::PlayerObject* p1 = self->getPlayer1();
@@ -543,12 +574,13 @@ void applyLayoutMode(gd::PlayLayer* layer, bool enable) {
         gd::CCArray* objs = *reinterpret_cast<gd::CCArray**>(uintptr_t(layer) + 0x234);
         if (objs) {
             unsigned int count = objs->count();
-            if (count < 100000) {
+            if (count < 200000) {
                 for (unsigned int i = 0; i < count; i++) {
                     auto obj = static_cast<gd::GameObject*>(objs->objectAtIndex(i));
                     if (!obj) continue;
                     if (isDecoration(obj)) {
-                        if (fnSetVisible) fnSetVisible(obj, !enable);
+                        if (orig_gameobject_setVisible) orig_gameobject_setVisible(obj, !enable);
+                        else if (fnSetVisible) fnSetVisible(obj, !enable);
                         else obj->setVisible(!enable);
                     }
                 }
@@ -621,6 +653,8 @@ bool install() {
     CREATE_HOOK("playLayer_transition",    OFFSET_PLAYLAYER_TRANSITION,    hook_playLayer_onEnterTransition, orig_playLayer_onEnterTransition);
 
     CREATE_HOOK("player_playDeathEffect",  OFFSET_PLAYER_PLAYDEATHEFF,     hook_player_playDeathEffect,   orig_player_playDeathEffect);
+
+    CREATE_HOOK("gameobject_setVisible",   OFFSET_GAMEOBJ_SETVISIBLE,      hook_gameobject_setVisible,    orig_gameobject_setVisible);
 
     // Resolve non-hooked helper addresses
     orig_bgl_releaseButton = reinterpret_cast<t_bgl_releaseButton>(gd_base + OFFSET_BGL_RELEASE_BUTTON);

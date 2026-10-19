@@ -31,6 +31,7 @@ namespace Hooks {
 
     constexpr uintptr_t OFFSET_GAMEOBJ_ADDGLOW        = 0xCFEF0;
     constexpr uintptr_t OFFSET_GAMEOBJ_PLAYSHINEEFF   = 0xEAB20;
+    constexpr uintptr_t OFFSET_GAMEOBJ_SETVISIBLE     = 0xE57C0;
 
     constexpr uintptr_t OFFSET_RINGOBJ_SPAWNCIRCLE    = 0x2523A0;
     constexpr uintptr_t OFFSET_CIRCLEWAVE_DRAW        = 0x17100;
